@@ -1,20 +1,23 @@
 package uz.instat.posterdemo
 
 import android.os.Bundle
-import com.google.android.material.snackbar.Snackbar
+import android.util.Log
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.navigation.findNavController
-import androidx.navigation.ui.AppBarConfiguration
-import androidx.navigation.ui.navigateUp
-import androidx.navigation.ui.setupActionBarWithNavController
-import android.view.Menu
-import android.view.MenuItem
+import com.joinposter.transport.PosterTransport
+import com.joinposter.transport.server.PosterDevice
 import uz.instat.posterdemo.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
-
-    private lateinit var appBarConfiguration: AppBarConfiguration
     private lateinit var binding: ActivityMainBinding
+    private val TAG ="PosterTransport"
+    private val NOTIFICATION_APP_NAME = "Mobilkassa"
+    private val APP_ID = "2962"
+    private val onMessage: (device: PosterDevice, message: String) -> Unit = { device, message ->
+        runOnUiThread {
+            Toast.makeText(this, "Message: $message\nFrom: ${device.ip}", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -22,12 +25,32 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        setSupportActionBar(binding.toolbar)
+        with(PosterTransport) {
+            onMessage = this@MainActivity.onMessage
+            onClose = { code, info, initByRemote ->
+                Log.d(TAG, "Closed connection: $code $info $initByRemote")
+            }
+            onError = { error ->
+                Log.d(TAG, "Error: ${error.message ?: error.toString()}")
+            }
+            onFinishedInit = {
+                Log.d(TAG, "Library is ready")
+            }
+            onOpen = {
+                hashMapOf("simple" to "test")
+            }
+
+            init(applicationContext, APP_ID, NOTIFICATION_APP_NAME)
+        }
+
+        binding.btnStart.setOnClickListener{
+            val connected = PosterTransport.connectedDevices
+            connected.forEach {
+                it.sendMessage("{\"text\":\"Hello!\"}")
+            }
+            PosterTransport.start()
+        }
     }
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        menuInflater.inflate(R.menu.menu_main, menu)
-        return true
-    }
+
 }
