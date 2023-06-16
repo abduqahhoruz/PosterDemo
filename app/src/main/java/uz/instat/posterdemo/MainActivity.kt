@@ -44,13 +44,12 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.btnStart.setOnClickListener{
+            PosterTransport.start()
             val connected = PosterTransport.connectedDevices
             connected.forEach {
                 it.sendMessage("{\"text\":\"Hello!\"}")
             }
-            PosterTransport.start()
+
         }
     }
-
-
 }
